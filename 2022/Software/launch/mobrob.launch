@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- our xacro/urdf model -->
+  <arg name="model" value="$(find mobrob)/urdf/mobrob.xacro"/>
+
+  <!-- load our urdf model (string) into global parameter called "robot_description"-->
+  <!-- xacro parses xacro files and returns a urdf file -->
+  <param name="robot_description"
+         command="$(find xacro)/xacro $(arg model)" />
+  
+  <arg name="world_name" default="$(find mobrob)/worlds/arrow_arena.world"/>
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+  	<arg name="world_name" value="$(arg world_name)"/>
+  	<arg name="debug" value="false" />
+  	<arg name="gui" value="true" />
+  	<arg name="paused" value="false"/>
+  	<arg name="use_sim_time" value="true"/>
+  	<arg name="headless" value="false"/>
+  </include>
+  
+  <!-- Spawn our robot using urdf_spawner node -->
+  <node name="urdf_spawner"
+        pkg="gazebo_ros"
+        type="spawn_model"
+        respawn="false"
+        output="screen"
+        args="-z 1.0
+              -unpause
+              -urdf
+              -model robot
+              -param robot_description"/>
+  <!-- load multiple values stored in .yaml file into global parameters -->
+  <!-- parameters store motor controller configurations -->
+  <rosparam command="load" file="$(find mobrob)/config/arm_control.yaml" />
+  <rosparam command="load" file="$(find mobrob)/config/joint_state_controller.yaml" />
+  <rosparam command="load" file="$(find mobrob)/config/control.yaml" />                        
+  
+  <!-- Spawn controllers -->
+  <node name="arm_controller_spawner" pkg="controller_manager" type="controller_manager" args="spawn arm_controller" respawn="false" output="screen"/>
+  <node name="joint_state_controller_spawner" pkg="controller_manager" type="controller_manager" args="spawn joint_state_controller" respawn="false" output="screen"/>
+  <node name="base_controller_spawner" pkg="controller_manager" type="spawner" args="robot_base_joint_publisher robot_base_velocity_controller"/>
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false" output="screen"/>
+
+
+</launch>
